@@ -109,7 +109,8 @@ class WhatsAppService {
         const { version } = await fetchLatestBaileysVersion();
 
         const sock = makeWASocket({
-            version,
+            // version,
+            version: [2, 3000, 1033893291],
             auth: state,
             printQRInTerminal: false,
             // Keep browser signature configurable via env for troubleshooting pairing issues
