@@ -1,0 +1,44 @@
+<div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 mb-6 transition-all duration-300">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <!-- Status & Title -->
+        <div class="flex items-center space-x-4">
+            <div class="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center shadow-inner flex-shrink-0">
+                <i id="statusIcon" class="ri-signal-wifi-line text-blue-600 text-xl"></i>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Status Koneksi</h3>
+                    <div id="statusIndicator" class="w-2.5 h-2.5 rounded-full bg-gray-400"></div>
+                </div>
+                <div class="flex items-baseline space-x-2">
+                    <span class="text-xl font-bold text-gray-800" id="connectionStatus">Menghubungkan…</span>
+                    <span id="socketStatus" class="text-[10px] text-gray-400">Socket: ...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="flex items-center space-x-8 px-8 border-x border-gray-100 hidden md:flex">
+            <div class="text-center">
+                <div class="text-xs text-gray-400 uppercase font-medium">Uptime</div>
+                <div class="text-lg font-bold text-blue-600" id="uptime">--</div>
+            </div>
+            <div class="text-center">
+                <div class="text-xs text-gray-400 uppercase font-medium">Pesan</div>
+                <div class="text-lg font-bold text-green-600" id="messageCount">--</div>
+            </div>
+        </div>
+
+        <!-- Progress/Message -->
+        <div class="flex-1 text-center md:text-left hidden lg:block">
+            <p id="statusMessage" class="text-sm text-gray-600 truncate">Memuat status koneksi…</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center space-x-2">
+            <button id="refreshBtn" type="button" class="inline-flex items-center space-x-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-700 transition-all text-sm font-medium">
+                <span id="refreshText">Refresh</span>
+            </button>
+        </div>
+    </div>
+</div>

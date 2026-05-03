@@ -1,0 +1,781 @@
+<script>
+    // Socket.IO connections
+    const socket = io('/', {
+        path: '/socket.io',
+        transports: ['polling'],
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        query: { userId: '<%= typeof userId !== "undefined" ? userId : "guest" %>' }
+    });
+
+    const socketStatusEl = document.getElementById('socketStatus');
+    function setSocketStatus(text, color = 'text-gray-500') {
+        if (!socketStatusEl) return;
+        socketStatusEl.className = `text-xs mt-1 ${color}`;
+        socketStatusEl.textContent = `Socket: ${text}`;
+    }
+
+    setSocketStatus('Menghubungkan…');
+
+    socket.on('connect', () => setSocketStatus('Terhubung', 'text-green-600'));
+    socket.on('disconnect', () => setSocketStatus('Terputus', 'text-red-600'));
+    socket.on('reconnect_attempt', () => setSocketStatus('Menyambungkan ulang…', 'text-yellow-600'));
+    socket.on('reconnect', () => setSocketStatus('Tersambung ulang', 'text-green-600'));
+    socket.on('connect_error', (err) => {
+        console.error('Socket connect_error:', err);
+        setSocketStatus('Gagal menghubungkan', 'text-red-600');
+    });
+    socket.on('reconnect_error', (err) => {
+        console.error('Socket reconnect_error:', err);
+        setSocketStatus('Gagal menyambungkan ulang', 'text-red-600');
+    });
+
+    let currentStatus = 'disconnected';
+    let messages = [];
+    let currentConnectionMethod = 'qr'; // Default prioritize QR method
+    let startTime = Date.now();
+    let messageCount = 0;
+
+    // DOM elements
+    const statusElement = document.getElementById('connectionStatus');
+    const statusMessageElement = document.getElementById('statusMessage');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusIcon = document.getElementById('statusIcon');
+    const connectionCard = document.getElementById('connectionCard');
+    const qrElement = document.getElementById('qrcode');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const testBtn = document.getElementById('testBtn');
+    const waLogoutBtn = document.getElementById('waLogoutBtn');
+    const messagesCard = document.getElementById('messagesCard');
+    const messagesList = document.getElementById('messagesList');
+    const sidebar = document.getElementById('sidebar');
+    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+    const actionStatus = document.getElementById('actionStatus');
+    const actionStatusText = document.getElementById('actionStatusText');
+    const uptimeElement = document.getElementById('uptime');
+    const messageCountElement = document.getElementById('messageCount');
+
+    // Mobile menu functionality
+    if (!window.toggleMobileMenu) {
+        window.toggleMobileMenu = function () {
+            const isOpen = sidebar && sidebar.classList.contains('translate-x-0');
+
+            if (!sidebar) return;
+
+            if (isOpen) {
+                sidebar.classList.remove('translate-x-0');
+                sidebar.classList.add('-translate-x-full');
+                if (mobileMenuOverlay) mobileMenuOverlay.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            } else {
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
+                if (mobileMenuOverlay) mobileMenuOverlay.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+            }
+        };
+    }
+
+    // Initialize overlay listeners once
+    if (!window.__menuInit) {
+        if (mobileMenuOverlay) {
+            mobileMenuOverlay.addEventListener('click', toggleMobileMenu);
+        }
+
+        // Close mobile menu on window resize to desktop
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) { // lg breakpoint
+                if (sidebar) sidebar.classList.remove('translate-x-0', '-translate-x-full');
+                if (mobileMenuOverlay) mobileMenuOverlay.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+        });
+
+        window.__menuInit = true;
+    }
+
+    // Connection method elements (QR only)
+    const qrTab = document.getElementById('qrTab');
+    const qrMethod = document.getElementById('qrMethod');
+
+    // Initialize connection method tab (QR only)
+    if (qrTab) {
+        qrTab.addEventListener('click', () => switchConnectionMethod('qr'));
+    }
+
+    // No pairing request in QR-only mode
+
+    // Update uptime and message count periodically
+    setInterval(updateMetrics, 1000);
+
+    function updateMetrics() {
+        if (currentStatus === 'connected' && uptimeElement) {
+            const uptime = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(uptime / 3600);
+            const minutes = Math.floor((uptime % 3600) / 60);
+            const seconds = uptime % 60;
+
+            if (hours > 0) {
+                uptimeElement.textContent = `${hours}h ${minutes}m`;
+            } else if (minutes > 0) {
+                uptimeElement.textContent = `${minutes}m ${seconds}s`;
+            } else {
+                uptimeElement.textContent = `${seconds}s`;
+            }
+        }
+
+        if (messageCountElement) {
+            messageCountElement.textContent = messageCount;
+        }
+    }
+
+    function showActionStatus(text, type = 'info') {
+        if (!actionStatus || !actionStatusText) return;
+
+        actionStatusText.textContent = text;
+        actionStatus.className = `mt-4 p-3 rounded-xl border flex items-center space-x-2`;
+
+        switch (type) {
+            case 'success':
+                actionStatus.classList.add('bg-green-50', 'border-green-200');
+                actionStatusText.classList.add('text-green-700');
+                break;
+            case 'error':
+                actionStatus.classList.add('bg-red-50', 'border-red-200');
+                actionStatusText.classList.add('text-red-700');
+                break;
+            default:
+                actionStatus.classList.add('bg-blue-50', 'border-blue-200');
+                actionStatusText.classList.add('text-blue-700');
+        }
+
+        actionStatus.classList.remove('hidden');
+
+        if (type !== 'info') {
+            setTimeout(() => {
+                actionStatus.classList.add('hidden');
+            }, 3000);
+        }
+    }
+
+    function hideActionStatus() {
+        if (actionStatus) {
+            actionStatus.classList.add('hidden');
+        }
+    }
+
+    // Socket event listeners for WhatsApp service
+    socket.on('connect', () => {
+        console.log('Connected to server');
+        refreshStatus();
+    });
+
+    socket.on('qr', (qr) => {
+        // Only handle QR if UI is in QR mode
+        if (currentConnectionMethod !== 'qr') return;
+        console.log('QR code received');
+        displayQR(qr);
+    });
+
+    // Pairing events removed (QR-only)
+
+    socket.on('connection_status', (data) => {
+        console.log('Connection status:', data);
+        updateStatus(data.status);
+    });
+
+    socket.on('new_message', (message) => {
+        console.log('New message:', message);
+        addMessage(message);
+        messageCount++;
+    });
+
+    // Functions
+    function switchConnectionMethod() {
+        currentConnectionMethod = 'qr';
+        if (qrTab) qrTab.classList.add('active');
+        if (qrMethod) qrMethod.style.display = 'block';
+    }
+
+
+
+
+
+    function updateStatus(status) {
+        currentStatus = status;
+
+        // Update status indicator and icon
+        if (statusIndicator && statusIcon) {
+            statusIndicator.className = 'w-3 h-3 rounded-full';
+            statusIcon.className = 'text-2xl';
+
+            switch (status) {
+                case 'connected':
+                    statusElement.textContent = 'Terhubung';
+                    statusElement.className = 'text-xl font-bold text-green-600';
+                    statusMessageElement.textContent = 'WhatsApp terhubung dan siap digunakan.';
+                    statusIndicator.className = 'w-2.5 h-2.5 rounded-full bg-green-500 status-pulse';
+                    statusIcon.className = 'ri-checkbox-circle-line text-green-600 text-xl';
+                    connectionCard.style.display = 'none';
+                    testBtn.disabled = false;
+
+                    waLogoutBtn.disabled = false;
+                    if (!startTime || currentStatus !== 'connected') {
+                        startTime = Date.now();
+                    }
+                    break;
+                case 'qr_ready':
+                    statusElement.textContent = 'Scan QR';
+                    statusElement.className = 'text-xl font-bold text-yellow-600';
+                    statusMessageElement.textContent = 'Pindai kode QR dengan aplikasi WhatsApp Anda.';
+                    statusIndicator.className = 'w-2.5 h-2.5 rounded-full bg-yellow-500 status-pulse';
+                    statusIcon.className = 'ri-qr-code-line text-yellow-600 text-xl';
+                    connectionCard.style.display = 'block';
+                    testBtn.disabled = true;
+
+                    waLogoutBtn.disabled = true;
+                    break;
+                case 'disconnected':
+                default:
+                    statusElement.textContent = 'Terputus';
+                    statusElement.className = 'text-xl font-bold text-red-600';
+                    statusMessageElement.textContent = 'WhatsApp belum terhubung.';
+                    statusIndicator.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+                    statusIcon.className = 'ri-close-circle-line text-red-600 text-xl';
+                    connectionCard.style.display = 'none';
+                    testBtn.disabled = true;
+
+                    waLogoutBtn.disabled = true;
+                    break;
+            }
+        }
+    }
+
+    function displayQR(qrData) {
+        qrElement.innerHTML = '';
+
+        if (!qrData) {
+            connectionCard.style.display = 'none';
+            return;
+        }
+
+        // Switch to QR method if QR code is received
+        if (currentConnectionMethod !== 'qr') {
+            switchConnectionMethod('qr');
+        }
+
+        connectionCard.style.display = 'block';
+
+        new QRCode(qrElement, {
+            text: qrData,
+            width: 256,
+            height: 256,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+        startQrCountdown(40);
+    }
+
+    // QR expiry countdown
+    let qrCountdownTimer = null;
+    function startQrCountdown(seconds) {
+        const descEl = document.getElementById('connectionDescription');
+        if (!descEl) return;
+        let remaining = seconds;
+        if (qrCountdownTimer) clearInterval(qrCountdownTimer);
+        qrCountdownTimer = setInterval(() => {
+            if (remaining <= 0) {
+                clearInterval(qrCountdownTimer);
+                qrCountdownTimer = null;
+                descEl.textContent = 'Kode QR kedaluwarsa. Klik Segarkan Status untuk membuat yang baru.';
+                return;
+            }
+            descEl.textContent = `Pilih metode koneksi yang Anda inginkan. (QR kedaluwarsa dalam ${remaining}s)`;
+            remaining--;
+        }, 1000);
+    }
+
+    function addMessage(message) {
+        messages.unshift(message);
+        messagesCard.style.display = 'block';
+
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message-item fade-in p-4 bg-gray-50 rounded-xl border border-gray-200';
+        messageElement.innerHTML = `
+            <div class="flex items-start space-x-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="ri-message-2-line text-blue-600"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="font-medium text-gray-800">
+                        ${message.groupName ? `[${message.groupName}] ` : ''}
+                        ${message.sender || 'Unknown'}
+                    </div>
+                    <div class="text-gray-700 mt-1">${message.message || message.text || 'No message'}</div>
+                    <div class="text-xs text-gray-500 mt-2">${new Date(message.timestamp * 1000 || Date.now()).toLocaleString()}</div>
+                </div>
+            </div>
+        `;
+
+        messagesList.insertBefore(messageElement, messagesList.firstChild);
+
+        if (messagesList.children.length > 10) {
+            messagesList.removeChild(messagesList.lastChild);
+        }
+    }
+
+    async function refreshStatus() {
+        const refreshText = document.getElementById('refreshText');
+        refreshText.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> <span>Refreshing...</span>';
+        refreshBtn.disabled = true;
+        showActionStatus('Refreshing connection status...', 'info');
+
+        try {
+            const response = await fetch('/status');
+            const data = await response.json();
+
+            updateStatus(data.status);
+
+            if (data.qr) {
+                displayQR(data.qr);
+            } else {
+                displayQR(null);
+            }
+
+            showActionStatus('Status updated successfully', 'success');
+        } catch (error) {
+            console.error('Error refreshing status:', error);
+            statusMessageElement.textContent = 'Error: Could not connect to the service.';
+            showActionStatus('Error: Could not connect to the service.', 'error');
+        } finally {
+            refreshText.innerHTML = '<i class="ri-refresh-line"></i> <span>Refresh Status</span>';
+            refreshBtn.disabled = false;
+        }
+    }
+
+    async function testMessage() {
+        // Ask for phone number with SweetAlert
+        const { value: phoneNumber } = await Swal.fire({
+            title: 'Nomor WhatsApp',
+            input: 'text',
+            inputPlaceholder: '6281234567890 atau 08123456789',
+            inputAttributes: {
+                autocapitalize: 'off',
+                autocorrect: 'off'
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Lanjut',
+            cancelButtonText: 'Batal',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Nomor WhatsApp harus diisi!';
+                }
+                if (!/^(62|08)\d{8,13}$/.test(value)) {
+                    return 'Format nomor tidak valid!';
+                }
+            }
+        });
+
+        if (!phoneNumber) return;
+        const finalPhone = phoneNumber.startsWith('08') ? phoneNumber.replace(/^08/, '628') : phoneNumber;
+        
+        // Ask user to choose message type
+        const { value: messageType } = await Swal.fire({
+            title: 'Pilih Tipe Pesan',
+            input: 'select',
+            inputOptions: {
+                'text': 'Pesan Teks Biasa',
+                'button': 'Pesan dengan Button (max 3)',
+                'list': 'Pesan dengan List'
+            },
+            inputPlaceholder: 'Pilih tipe pesan',
+            showCancelButton: true,
+            confirmButtonText: 'Lanjut',
+            cancelButtonText: 'Batal'
+        });
+
+        if (!messageType) return;
+
+        if (messageType === 'text') {
+            // Send regular text message
+            const { value: message } = await Swal.fire({
+                title: 'Pesan Teks',
+                input: 'textarea',
+                inputPlaceholder: 'Ketik pesan Anda di sini...',
+                inputValue: 'Hello from WhatsApp API!',
+                showCancelButton: true,
+                confirmButtonText: 'Kirim',
+                cancelButtonText: 'Batal',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Pesan tidak boleh kosong!';
+                    }
+                }
+            });
+
+            if (!message) return;
+
+            showActionStatus('Sending test message...', 'info');
+
+            try {
+                const response = await fetch('/send-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        to: finalPhone,
+                        message: message
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showActionStatus('Message sent successfully!', 'success');
+                } else {
+                    showActionStatus('Error: ' + (result.error || 'Failed to send message'), 'error');
+                }
+            } catch (error) {
+                showActionStatus('Error: ' + error.message, 'error');
+            }
+        } else if (messageType === 'button') {
+            // Send button message
+            const { value: formValues } = await Swal.fire({
+                title: 'Pesan dengan Button',
+                html: `
+                    <div class="text-left space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Teks Pesan</label>
+                            <textarea id="buttonText" class="swal2-input w-full" placeholder="Silakan pilih opsi di bawah:" rows="2"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Button 1 (Required)</label>
+                            <input id="btn1" class="swal2-input" placeholder="Ya" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Button 2 (Optional)</label>
+                            <input id="btn2" class="swal2-input" placeholder="Tidak">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Button 3 (Optional)</label>
+                            <input id="btn3" class="swal2-input" placeholder="Nanti">
+                        </div>
+                    </div>
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Kirim',
+                cancelButtonText: 'Batal',
+                preConfirm: () => {
+                    const text = document.getElementById('buttonText').value;
+                    const btn1 = document.getElementById('btn1').value;
+                    const btn2 = document.getElementById('btn2').value;
+                    const btn3 = document.getElementById('btn3').value;
+
+                    if (!text || !btn1) {
+                        Swal.showValidationMessage('Teks pesan dan button 1 wajib diisi');
+                        return false;
+                    }
+
+                    return { text, btn1, btn2, btn3 };
+                }
+            });
+
+            if (!formValues) return;
+
+            showActionStatus('Sending button message...', 'info');
+
+            const interactiveButtons = [
+                { 
+                    name: 'quick_reply', 
+                    buttonParamsJson: JSON.stringify({
+                        display_text: formValues.btn1,
+                        id: 'btn_1'
+                    })
+                }
+            ];
+            if (formValues.btn2) {
+                interactiveButtons.push({ 
+                    name: 'quick_reply', 
+                    buttonParamsJson: JSON.stringify({
+                        display_text: formValues.btn2,
+                        id: 'btn_2'
+                    })
+                });
+            }
+            if (formValues.btn3) {
+                interactiveButtons.push({ 
+                    name: 'quick_reply', 
+                    buttonParamsJson: JSON.stringify({
+                        display_text: formValues.btn3,
+                        id: 'btn_3'
+                    })
+                });
+            }
+
+            try {
+                const response = await fetch('/send-interactive', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        to: finalPhone,
+                        text: formValues.text,
+                        footer: 'Silakan pilih salah satu',
+                        interactiveButtons: interactiveButtons
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showActionStatus('Button message sent successfully!', 'success');
+                } else {
+                    showActionStatus('Error: ' + (result.error || 'Failed to send button message'), 'error');
+                }
+            } catch (error) {
+                showActionStatus('Error: ' + error.message, 'error');
+            }
+        } else if (messageType === 'list') {
+            // Send list message
+            const { value: formValues } = await Swal.fire({
+                title: 'Pesan dengan List',
+                html: `
+                    <div class="text-left space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Teks Pesan</label>
+                            <textarea id="listText" class="swal2-input w-full" placeholder="Silakan pilih menu:" rows="2"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Judul List</label>
+                            <input id="listTitle" class="swal2-input" placeholder="Menu Utama" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Teks Tombol</label>
+                            <input id="buttonText" class="swal2-input" placeholder="Pilih Menu" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Option 1 Title</label>
+                            <input id="opt1Title" class="swal2-input" placeholder="Produk" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Option 1 Description</label>
+                            <input id="opt1Desc" class="swal2-input" placeholder="Lihat katalog produk">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Option 2 Title</label>
+                            <input id="opt2Title" class="swal2-input" placeholder="Layanan">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Option 2 Description</label>
+                            <input id="opt2Desc" class="swal2-input" placeholder="Layanan kami">
+                        </div>
+                    </div>
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Kirim',
+                cancelButtonText: 'Batal',
+                width: '600px',
+                preConfirm: () => {
+                    const text = document.getElementById('listText').value;
+                    const title = document.getElementById('listTitle').value;
+                    const buttonText = document.getElementById('buttonText').value;
+                    const opt1Title = document.getElementById('opt1Title').value;
+                    const opt1Desc = document.getElementById('opt1Desc').value;
+                    const opt2Title = document.getElementById('opt2Title').value;
+                    const opt2Desc = document.getElementById('opt2Desc').value;
+
+                    if (!text || !title || !buttonText || !opt1Title) {
+                        Swal.showValidationMessage('Teks pesan, judul, teks tombol, dan option 1 wajib diisi');
+                        return false;
+                    }
+
+                    return { text, title, buttonText, opt1Title, opt1Desc, opt2Title, opt2Desc };
+                }
+            });
+
+            if (!formValues) return;
+
+            showActionStatus('Sending list message...', 'info');
+
+            const rows = [
+                { 
+                    header: formValues.opt1Title,
+                    title: formValues.opt1Title, 
+                    description: formValues.opt1Desc || '',
+                    id: 'opt_1'
+                }
+            ];
+            if (formValues.opt2Title) {
+                rows.push({ 
+                    header: formValues.opt2Title,
+                    title: formValues.opt2Title, 
+                    description: formValues.opt2Desc || '',
+                    id: 'opt_2'
+                });
+            }
+
+            const buttonParamsJson = JSON.stringify({
+                title: formValues.buttonText,
+                sections: [{
+                    title: 'Options',
+                    rows: rows
+                }]
+            });
+
+            try {
+                const response = await fetch('/send-interactive', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        to: finalPhone,
+                        text: formValues.text,
+                        title: formValues.title,
+                        footer: 'Pilih dari list',
+                        interactiveButtons: [{
+                            name: 'single_select',
+                            buttonParamsJson: buttonParamsJson
+                        }]
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showActionStatus('List message sent successfully!', 'success');
+                } else {
+                    showActionStatus('Error: ' + (result.error || 'Failed to send list message'), 'error');
+                }
+            } catch (error) {
+                showActionStatus('Error: ' + error.message, 'error');
+            }
+        }
+    }
+
+    /* Test Interactive Message - Format Baileys Itsukichann */
+    async function waLogout() {
+        const result = await Swal.fire({
+            title: 'Log out from WhatsApp?',
+            text: 'This will clear the session and you will need to scan the QR code again.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Log out',
+        });
+        if (!result.isConfirmed) return;
+
+        showActionStatus('Logging out from WhatsApp...', 'info');
+
+        try {
+            const response = await fetch('/logout', {
+                method: 'POST'
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showActionStatus('Logged out from WhatsApp successfully.', 'success');
+                updateStatus('disconnected');
+                messageCount = 0;
+            } else {
+                showActionStatus('Error: ' + (result.error || 'Failed to log out from WhatsApp.'), 'error');
+            }
+        } catch (error) {
+            showActionStatus('Error: ' + error.message, 'error');
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const html = document.documentElement;
+
+        const applyTheme = (theme) => {
+            if (theme === 'dark') {
+                html.classList.add('dark');
+                if (darkModeToggle) darkModeToggle.innerHTML = '<i class="ri-sun-line text-yellow-400 text-xl"></i>';
+            } else {
+                html.classList.remove('dark');
+                if (darkModeToggle) darkModeToggle.innerHTML = '<i class="ri-moon-line text-gray-600 text-xl"></i>';
+            }
+        };
+
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        applyTheme(savedTheme);
+
+        if (darkModeToggle) {
+            darkModeToggle.addEventListener('click', () => {
+                const currentTheme = html.classList.contains('dark') ? 'dark' : 'light';
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                localStorage.setItem('theme', newTheme);
+                applyTheme(newTheme);
+            });
+        }
+
+        refreshStatus();
+
+        // SweetAlert2 confirm for any form with data-confirm
+        document.querySelectorAll('form[data-confirm]').forEach(form => {
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const message = form.getAttribute('data-confirm') || 'Are you sure?';
+                const result = await Swal.fire({
+                    title: 'Are you sure?',
+                    text: message,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Yes',
+                });
+                if (result.isConfirmed) form.submit();
+            });
+        });
+
+        // Add fade-in animation to elements
+        document.querySelectorAll('.fade-in').forEach((el, index) => {
+            el.style.animationDelay = `${index * 0.1}s`;
+        });
+
+        // Refresh button handler
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', refreshStatus);
+        }
+
+        // Reset session handler
+        const resetSessionBtn = document.getElementById('resetSessionBtn');
+        if (resetSessionBtn) {
+            resetSessionBtn.addEventListener('click', async () => {
+                const result = await Swal.fire({
+                    title: 'Reset sesi?',
+                    text: 'Sesi WhatsApp akan direset dan QR baru akan dibuat.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#f59e0b',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Ya, reset',
+                });
+                if (!result.isConfirmed) return;
+
+                try {
+                    const resp = await fetch('/reset-session', { method: 'POST' });
+                    const json = await resp.json();
+                    if (!resp.ok || !json.success) throw new Error(json.error || 'Gagal mereset sesi');
+                    showActionStatus('Sesi berhasil direset. Memuat QR...', 'success');
+                    await refreshStatus();
+                    startQrCountdown(40);
+                } catch (err) {
+                    showActionStatus('Error: ' + err.message, 'error');
+                }
+            });
+        }
+    });
+</script>

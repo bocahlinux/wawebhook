@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <%- include('partials/head') %>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div class="flex min-h-screen">
+        <%- include('partials/sidebar') %>
+        <div class="flex-1 flex flex-col lg:ml-64">
+            <%- include('partials/navbar') %>
+            <main class="flex-1 p-4 sm:p-6 lg:p-8">
+                <div class="max-w-7xl mx-auto">
+                    
+                    <!-- Top Status Bar (Seberis Memanjang) -->
+                    <div class="fade-in">
+                        <%- include('partials/status-card') %>
+                    </div>
+
+                    <!-- Grid: QR + Actions (Berjejeran) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <!-- Left: QR Container -->
+                        <div class="fade-in">
+                            <%- include('partials/qr-container') %>
+                        </div>
+
+                        <!-- Right: Quick Actions -->
+                        <div class="fade-in">
+                            <%- include('partials/actions') %>
+                        </div>
+                    </div>
+
+                    <!-- Recent Messages (Optional, can be added below) -->
+                    <div id="messagesCard" class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 fade-in" style="display: none;">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800">Pesan Terbaru</h3>
+                            <i class="ri-history-line text-blue-500 text-xl"></i>
+                        </div>
+                        <div id="messagesList" class="space-y-4">
+                            <!-- Messages will appear here -->
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <%- include('partials/bottom-nav') %>
+
+    <%- include('partials/scripts') %>
+</body>
+</html>

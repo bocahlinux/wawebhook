@@ -1,0 +1,37 @@
+<header class="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <div>
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-800"><%= typeof title !== 'undefined' ? title : 'Dasbor' %></h2>
+                <p class="text-sm text-gray-500 hidden sm:block mt-1">Kelola layanan WhatsApp Webhook Anda</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <!-- User info (if available) -->
+            <% if (typeof user !== 'undefined' && user) { %>
+                <div class="hidden sm:flex items-center space-x-3 pr-4 border-r border-gray-200">
+                    <div class="text-right">
+                        <p class="text-xs font-bold text-gray-900 leading-none mb-1"><%= user.name || 'User' %></p>
+                        <p class="text-[10px] text-gray-400 leading-none"><%= user.email %></p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-100">
+                        <span class="font-bold text-sm"><%= (user.name || 'U').substring(0, 1).toUpperCase() %></span>
+                    </div>
+                </div>
+            <% } %>
+
+            <!-- Dark mode toggle -->
+            <button id="darkModeToggle" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                <i class="ri-sun-line text-gray-600 text-xl"></i>
+            </button>
+
+            <!-- Logout button -->
+            <form id="logoutForm" action="/logout-user" method="POST" data-confirm="Apakah Anda yakin ingin logout?">
+                <button type="submit" class="group flex items-center space-x-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md">
+                    <i class="ri-logout-box-line text-lg group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium hidden sm:inline">Keluar</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</header>

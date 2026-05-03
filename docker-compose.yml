@@ -1,0 +1,41 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wa-webhook-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: ${PORT:-8181}
+      NODE_ENV: production
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/whatsapp-webhook}
+      SESSION_SECRET: ${SESSION_SECRET:-change-this-secret}
+    ports:
+      - "${PORT:-8181}:8181"
+    volumes:
+      - ./auth_info_baileys:/app/auth_info_baileys
+      - ./logs:/app/logs
+    depends_on:
+      mongo:
+        condition: service_healthy
+        required: false
+
+  mongo:
+    image: mongo:7
+    container_name: wa-webhook-mongo
+    restart: unless-stopped
+    profiles:
+      - localdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
