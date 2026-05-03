@@ -9,8 +9,8 @@ const router = Router();
 // Cookie options
 const cookieOptions = {
     httpOnly: true,
-    secure: config.node_env === 'production',
-    sameSite: 'lax',
+    secure: config.session.cookieSecure,
+    sameSite: config.session.cookieSameSite,
     maxAge: config.session.maxAge,
     signed: true
 };

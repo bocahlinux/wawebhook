@@ -17,6 +17,12 @@ export const config = {
     session: {
         secret: process.env.SESSION_SECRET || 'default-secret',
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        cookieSecure: (process.env.COOKIE_SECURE || '').toLowerCase() === 'true'
+            ? true
+            : (process.env.COOKIE_SECURE || '').toLowerCase() === 'false'
+                ? false
+                : (process.env.NODE_ENV || 'development') === 'production',
+        cookieSameSite: process.env.COOKIE_SAMESITE || 'lax'
     },
     whatsapp: {
         keepAliveInterval: 25000,
