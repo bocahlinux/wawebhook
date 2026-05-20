@@ -32,9 +32,17 @@ router.get('/dashboard', isAuthenticated, async (req, res) => {
     }
 });
 
+// Groups
+router.get('/groups', isAuthenticated, (req, res) => {
+    res.render('groups', {
+        page: 'groups',
+        user: req.user
+    });
+});
+
 // Documentation
 router.get('/documentation', isAuthenticated, (req, res) => {
-    res.render('documentation', { 
+    res.render('documentation', {
         page: 'documentation',
         user: req.user
     });

@@ -555,6 +555,75 @@ class WhatsAppService {
         return code;
     }
 
+    /**
+     * Get list of groups the WhatsApp account is participating in
+     */
+    async getGroups(userId) {
+        const session = await this.ensureSession(userId);
+
+        if (!session.isConnected) {
+            throw new Error('WhatsApp not connected');
+        }
+
+        const groups = await session.sock.groupFetchAllParticipating();
+
+        return Object.entries(groups).map(([jid, meta]) => ({
+            id: jid,
+            name: meta.subject,
+            description: meta.desc || null,
+            participantCount: meta.participants?.length || 0,
+            creation: meta.creation || null,
+            owner: meta.owner || null
+        }));
+    }
+
+    /**
+     * Send a message to a WhatsApp group
+     */
+    async sendGroupMessage(userId, groupId, message) {
+        const session = await this.ensureSession(userId);
+
+        if (!session.isConnected) {
+            throw new Error('WhatsApp not connected');
+        }
+
+        const groupJid = groupId.includes('@g.us') ? groupId : `${groupId}@g.us`;
+
+        const result = await session.sock.sendMessage(groupJid, { text: message });
+
+        const recordedOutgoing = await MessageService.recordMessage({
+            userId,
+            chatJid: groupJid,
+            sender: 'me',
+            text: message,
+            direction: 'out',
+            timestamp: Date.now(),
+            stanzaId: result.key.id,
+            rawMessage: result.message,
+            senderJid: session.sock.user.id.replace(/:.*$/, '@s.whatsapp.net')
+        });
+
+        if (recordedOutgoing) {
+            this.io.to(userId).emit('new_message', {
+                ...recordedOutgoing.toObject(),
+                id: recordedOutgoing._id,
+                chat_jid: recordedOutgoing.chatJid
+            });
+            if (this.webhookService && this.appSettings.webhook_toggle_message_out !== 'false') {
+                this.webhookService.send('message.out', {
+                    userId,
+                    id: recordedOutgoing._id,
+                    chatJid: recordedOutgoing.chatJid,
+                    sender: recordedOutgoing.sender,
+                    text: recordedOutgoing.message,
+                    timestamp: recordedOutgoing.timestamp
+                });
+            }
+        }
+
+        return result;
+    }
+
     async sendInteractiveMessage(userId, to, content) {
         console.log(`[WhatsAppService] sendInteractiveMessage start for user: ${userId}`);
         const session = await this.ensureSession(userId);

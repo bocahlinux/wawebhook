@@ -105,6 +105,34 @@
                                             </div>
                                         </td>
                                     </tr>
+                                    <tr class="hover:bg-gray-50 transition-colors">
+                                        <td class="py-4 px-4">
+                                            <span class="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-lg">GET</span>
+                                        </td>
+                                        <td class="py-4 px-4">
+                                            <code class="bg-gray-100 text-black px-2 py-1 rounded text-xs font-mono">/api/groups</code>
+                                        </td>
+                                        <td class="py-4 px-4 text-gray-700">
+                                            <div class="text-xs mb-1">Ambil daftar semua grup yang diikuti akun WhatsApp</div>
+                                            <div class="text-[10px] text-gray-500 uppercase font-medium">Auth: Cookie/API Key</div>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition-colors">
+                                        <td class="py-4 px-4">
+                                            <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-lg">POST</span>
+                                        </td>
+                                        <td class="py-4 px-4">
+                                            <code class="bg-gray-100 text-black px-2 py-1 rounded text-xs font-mono">/api/send-group-message</code>
+                                        </td>
+                                        <td class="py-4 px-4 text-gray-700">
+                                            <div class="text-xs mb-2">Kirim pesan teks ke grup WhatsApp</div>
+                                            <div class="text-[10px] text-gray-500 uppercase font-medium mb-1">Body Parameters:</div>
+                                            <div class="space-y-1">
+                                                <div class="text-[10px] font-mono bg-gray-50 p-1 rounded"><span class="text-blue-600">groupId</span> (string, JID grup)</div>
+                                                <div class="text-[10px] font-mono bg-gray-50 p-1 rounded"><span class="text-blue-600">message</span> (text)</div>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -172,6 +200,74 @@
     }]
   }' \
   http://localhost:3000/send-interactive</code></pre>
+                                </div>
+                            </div>
+                            <!-- Group Messaging Examples -->
+                            <div class="border-t border-gray-200 pt-6 mt-6">
+                                <div class="flex items-center space-x-2 mb-4">
+                                    <div class="w-8 h-8 bg-linear-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
+                                        <i class="ri-group-line text-green-600 text-sm"></i>
+                                    </div>
+                                    <h4 class="text-base md:text-lg font-semibold text-gray-800">Pesan Grup</h4>
+                                </div>
+
+                                <p class="text-sm text-gray-600 mb-4">Gunakan dua langkah: ambil daftar grup untuk mendapatkan <code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">groupId</code>, lalu kirim pesan ke grup tersebut.</p>
+
+                                <div class="space-y-4">
+                                    <div>
+                                        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Langkah 1 — Ambil daftar grup</p>
+                                        <div class="bg-gray-900 text-gray-100 rounded-xl p-4 overflow-x-auto">
+                                            <pre class="text-xs md:text-sm font-mono whitespace-pre-wrap break-all"><code>$ curl -X GET \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  http://localhost:3000/api/groups</code></pre>
+                                        </div>
+                                        <div class="mt-2 bg-gray-800 text-gray-200 rounded-xl p-4 overflow-x-auto">
+                                            <p class="text-[10px] text-gray-400 uppercase font-semibold mb-2">Response:</p>
+                                            <pre class="text-xs font-mono whitespace-pre-wrap break-all"><code>{
+  "success": true,
+  "total": 2,
+  "groups": [
+    {
+      "id": "120363XXXXXXXXXX@g.us",
+      "name": "Tim Marketing",
+      "description": "Grup diskusi tim marketing",
+      "participantCount": 25,
+      "owner": "6281234567890@s.whatsapp.net"
+    }
+  ]
+}</code></pre>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Langkah 2 — Kirim pesan ke grup</p>
+                                        <div class="bg-gray-900 text-gray-100 rounded-xl p-4 overflow-x-auto">
+                                            <pre class="text-xs md:text-sm font-mono whitespace-pre-wrap break-all"><code>$ curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -d '{
+    "groupId": "120363XXXXXXXXXX@g.us",
+    "message": "Halo semua! Ada pengumuman penting."
+  }' \
+  http://localhost:3000/api/send-group-message</code></pre>
+                                        </div>
+                                        <div class="mt-2 bg-gray-800 text-gray-200 rounded-xl p-4 overflow-x-auto">
+                                            <p class="text-[10px] text-gray-400 uppercase font-semibold mb-2">Response:</p>
+                                            <pre class="text-xs font-mono whitespace-pre-wrap break-all"><code>{
+  "success": true,
+  "messageId": "XXXXXXXXXXXXX",
+  "groupId": "120363XXXXXXXXXX@g.us",
+  "message": "Halo semua! Ada pengumuman penting."
+}</code></pre>
+                                        </div>
+                                    </div>
+
+                                    <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                        <div class="flex items-start space-x-2">
+                                            <i class="ri-lightbulb-line text-yellow-600 mt-0.5 shrink-0"></i>
+                                            <p class="text-xs text-yellow-700"><strong>Tips:</strong> Nilai <code class="bg-yellow-100 px-1 rounded font-mono">groupId</code> bisa disertakan dengan atau tanpa suffix <code class="bg-yellow-100 px-1 rounded font-mono">@g.us</code> — sistem akan menambahkannya otomatis.</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

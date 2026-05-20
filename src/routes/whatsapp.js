@@ -90,6 +90,60 @@ router.post('/send-message', isAuthenticatedOrApiKey, async (req, res) => {
 
 
 
+// Get list of groups
+router.get('/api/groups', isAuthenticatedOrApiKey, async (req, res) => {
+    try {
+        const userId = getEffectiveUserId(req);
+        const whatsappService = req.app.get('whatsappService');
+
+        const groups = await whatsappService.getGroups(userId);
+
+        res.json({
+            success: true,
+            total: groups.length,
+            groups
+        });
+    } catch (error) {
+        console.error('Error fetching groups:', error);
+        res.status(500).json({
+            error: 'Failed to fetch groups',
+            details: error.message
+        });
+    }
+});
+
+// Send message to group
+router.post('/api/send-group-message', isAuthenticatedOrApiKey, async (req, res) => {
+    const { groupId, message } = req.body;
+
+    if (!groupId || !message) {
+        return res.status(400).json({
+            error: 'Missing required fields',
+            message: 'Both "groupId" and "message" are required'
+        });
+    }
+
+    try {
+        const userId = getEffectiveUserId(req);
+        const whatsappService = req.app.get('whatsappService');
+
+        const result = await whatsappService.sendGroupMessage(userId, groupId, message);
+
+        res.json({
+            success: true,
+            messageId: result.key.id,
+            groupId: groupId,
+            message: message
+        });
+    } catch (error) {
+        console.error('Error sending group message:', error);
+        res.status(500).json({
+            error: 'Failed to send group message',
+            details: error.message
+        });
+    }
+});
+
 // Send interactive message
 router.post('/send-interactive', isAuthenticatedOrApiKey, async (req, res) => {
     const { to, text, footer, title, subtitle, interactiveButtons } = req.body;

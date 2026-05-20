@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <%- include('partials/head', { title: 'Grup WhatsApp' }) %>
+</head>
+<body class="bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div class="flex min-h-screen">
+        <%- include('partials/sidebar') %>
+        <div class="flex-1 flex flex-col lg:ml-64">
+            <%- include('partials/navbar', { title: 'Grup WhatsApp' }) %>
+            <main class="flex-1 p-4 sm:p-6 lg:p-8">
+                <div class="max-w-7xl mx-auto">
+
+                    <!-- Welcome Section -->
+                    <div class="mb-8 fade-in">
+                        <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Grup WhatsApp</h1>
+                        <p class="text-lg text-gray-600">Lihat daftar grup dan kirim pesan langsung ke grup</p>
+                    </div>
+
+                    <!-- Stats & Actions Bar -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                        <!-- Total Grup -->
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 card-hover transition-all duration-300 fade-in">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-800">Total Grup</h3>
+                                    <p id="totalGroups" class="text-3xl font-bold text-green-600 mt-1">—</p>
+                                    <p class="text-sm text-gray-500 mt-1">Grup yang diikuti</p>
+                                </div>
+                                <div class="w-14 h-14 bg-linear-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center shadow-inner">
+                                    <i class="ri-group-line text-green-600 text-2xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cari Grup -->
+                        <div class="lg:col-span-2 bg-white rounded-2xl shadow-lg border border-gray-100 p-6 card-hover transition-all duration-300 fade-in">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-800">Cari & Muat Ulang</h3>
+                                    <p class="text-sm text-gray-600 mt-1">Filter berdasarkan nama atau Group ID</p>
+                                </div>
+                                <div class="w-14 h-14 bg-linear-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center shadow-inner">
+                                    <i class="ri-search-line text-blue-600 text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <div class="relative flex-1">
+                                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                                        <i class="ri-search-line"></i>
+                                    </span>
+                                    <input id="searchInput" type="text" placeholder="Cari nama grup atau Group ID..."
+                                        class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none text-sm">
+                                </div>
+                                <button id="refreshBtn" onclick="loadGroups()"
+                                    class="group flex items-center justify-center space-x-2 px-6 py-3 bg-linear-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-1">
+                                    <i class="ri-refresh-line group-hover:scale-110 transition-transform" id="refreshIcon"></i>
+                                    <span>Muat Ulang</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Group List -->
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 fade-in">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-xl font-semibold text-gray-800">Daftar Grup</h3>
+                                <p class="text-sm text-gray-600 mt-1">Semua grup WhatsApp yang diikuti akun ini</p>
+                            </div>
+                            <div class="w-14 h-14 bg-linear-to-br from-indigo-100 to-indigo-200 rounded-2xl flex items-center justify-center shadow-inner">
+                                <i class="ri-group-2-line text-indigo-600 text-2xl"></i>
+                            </div>
+                        </div>
+
+                        <!-- Loading state -->
+                        <div id="loadingState" class="py-12 text-center">
+                            <div class="flex flex-col items-center space-y-3">
+                                <div class="w-10 h-10 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin"></div>
+                                <p class="text-gray-500">Memuat daftar grup...</p>
+                            </div>
+                        </div>
+
+                        <!-- Error state -->
+                        <div id="errorState" class="hidden py-12 text-center">
+                            <div class="flex flex-col items-center space-y-3">
+                                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-2">
+                                    <i class="ri-error-warning-line text-4xl text-red-400"></i>
+                                </div>
+                                <p class="text-lg font-medium text-gray-400">Gagal memuat grup</p>
+                                <p id="errorMessage" class="text-sm text-gray-400"></p>
+                                <button onclick="loadGroups()" class="mt-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm transition-colors">
+                                    Coba Lagi
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div id="tableContainer" class="hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="text-left border-b border-gray-100">
+                                            <th class="pb-4 px-4 font-semibold text-gray-800">#</th>
+                                            <th class="pb-4 px-4 font-semibold text-gray-800">Nama Grup</th>
+                                            <th class="pb-4 px-4 font-semibold text-gray-800">Group ID</th>
+                                            <th class="pb-4 px-4 font-semibold text-gray-800 text-center">Anggota</th>
+                                            <th class="pb-4 px-4 font-semibold text-gray-800 text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="groupTableBody" class="divide-y divide-gray-50"></tbody>
+                                </table>
+                            </div>
+
+                            <!-- Empty state (no groups) -->
+                            <div id="emptyState" class="hidden py-12 text-center">
+                                <div class="flex flex-col items-center space-y-3">
+                                    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-2">
+                                        <i class="ri-group-2-line text-4xl text-gray-300"></i>
+                                    </div>
+                                    <p class="text-lg font-medium text-gray-400">Tidak ada grup ditemukan</p>
+                                    <p class="text-sm text-gray-400">WhatsApp Anda belum bergabung di grup manapun</p>
+                                </div>
+                            </div>
+
+                            <!-- No search result -->
+                            <div id="noSearchResult" class="hidden py-12 text-center">
+                                <div class="flex flex-col items-center space-y-3">
+                                    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-2">
+                                        <i class="ri-search-line text-4xl text-gray-300"></i>
+                                    </div>
+                                    <p class="text-lg font-medium text-gray-400">Tidak ada hasil pencarian</p>
+                                    <p class="text-sm text-gray-400">Coba kata kunci yang berbeda</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <%- include('partials/bottom-nav') %>
+
+    <!-- Send Message Modal -->
+    <div id="sendModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-40 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="ri-close-line text-2xl"></i>
+            </button>
+            <div class="flex items-center space-x-3 mb-6">
+                <div class="w-14 h-14 bg-linear-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center shadow-inner">
+                    <i class="ri-send-plane-line text-green-600 text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800">Kirim Pesan ke Grup</h3>
+                    <p id="modalGroupName" class="text-sm text-gray-500 mt-0.5 truncate max-w-xs"></p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">Group ID</label>
+                    <div class="flex items-center space-x-2">
+                        <input id="modalGroupId" type="text" readonly
+                            class="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600 font-mono outline-none">
+                        <button onclick="copyModalId()"
+                            class="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors text-gray-600" title="Salin ID">
+                            <i class="ri-clipboard-line"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="modalMessage" class="block text-sm font-medium text-gray-700">Pesan</label>
+                    <textarea id="modalMessage" rows="4" placeholder="Ketik pesan yang ingin dikirim ke grup..."
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none text-sm resize-none"></textarea>
+                </div>
+
+                <div class="flex items-center space-x-3 pt-2">
+                    <button onclick="closeModal()"
+                        class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm">
+                        Batal
+                    </button>
+                    <button id="sendBtn" onclick="sendGroupMessage()"
+                        class="flex-1 group flex items-center justify-center space-x-2 py-3 bg-linear-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-1 text-sm">
+                        <i class="ri-send-plane-fill group-hover:scale-110 transition-transform"></i>
+                        <span>Kirim Pesan</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('partials/simple-scripts') %>
+
+    <script>
+        let allGroups = [];
+
+        async function loadGroups() {
+            showLoading();
+            const refreshIcon = document.getElementById('refreshIcon');
+            refreshIcon.classList.add('animate-spin');
+
+            try {
+                const res = await fetch('/api/groups');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.details || data.error || 'Gagal memuat grup');
+
+                allGroups = data.groups || [];
+                document.getElementById('totalGroups').textContent = allGroups.length;
+                renderTable(allGroups);
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                refreshIcon.classList.remove('animate-spin');
+            }
+        }
+
+        function renderTable(groups) {
+            const tbody = document.getElementById('groupTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const noSearchResult = document.getElementById('noSearchResult');
+            const tableContainer = document.getElementById('tableContainer');
+
+            emptyState.classList.add('hidden');
+            noSearchResult.classList.add('hidden');
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            tableContainer.classList.remove('hidden');
+
+            if (allGroups.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            if (groups.length === 0) {
+                tbody.innerHTML = '';
+                noSearchResult.classList.remove('hidden');
+                return;
+            }
+
+            tbody.innerHTML = groups.map((group, i) => `
+                <tr class="hover:bg-gray-50/50 transition-colors">
+                    <td class="py-4 px-4 text-sm text-gray-400">${i + 1}</td>
+                    <td class="py-4 px-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-linear-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                                <span class="text-white font-bold text-sm">${escapeHtml(group.name).charAt(0).toUpperCase()}</span>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-800 text-sm">${escapeHtml(group.name)}</p>
+                                ${group.description ? `<p class="text-xs text-gray-400 mt-0.5 max-w-xs truncate">${escapeHtml(group.description)}</p>` : ''}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-4 px-4">
+                        <div class="flex items-center space-x-2">
+                            <code class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg font-mono">${escapeHtml(group.id)}</code>
+                            <button onclick="copyId('${escapeHtml(group.id)}')"
+                                class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
+                                title="Salin Group ID">
+                                <i class="ri-clipboard-line text-sm"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="py-4 px-4 text-center">
+                        <span class="inline-flex items-center space-x-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">
+                            <i class="ri-user-line"></i>
+                            <span>${group.participantCount}</span>
+                        </span>
+                    </td>
+                    <td class="py-4 px-4 text-center">
+                        <button onclick="openModal('${escapeHtml(group.id)}', '${escapeHtml(group.name).replace(/'/g, "\\'")}')"
+                            class="inline-flex items-center space-x-1.5 px-3 py-2 bg-linear-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl text-xs font-medium transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5">
+                            <i class="ri-send-plane-line"></i>
+                            <span>Kirim Pesan</span>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showLoading() {
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('tableContainer').classList.add('hidden');
+        }
+
+        function showError(msg) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('tableContainer').classList.add('hidden');
+            document.getElementById('errorMessage').textContent = msg;
+            document.getElementById('errorState').classList.remove('hidden');
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function copyId(id) {
+            navigator.clipboard.writeText(id).then(() => showNotification('Group ID disalin!', 'success'));
+        }
+
+        function copyModalId() {
+            navigator.clipboard.writeText(document.getElementById('modalGroupId').value)
+                .then(() => showNotification('Group ID disalin!', 'success'));
+        }
+
+        function openModal(groupId, groupName) {
+            document.getElementById('modalGroupId').value = groupId;
+            document.getElementById('modalGroupName').textContent = groupName;
+            document.getElementById('modalMessage').value = '';
+            const modal = document.getElementById('sendModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => document.getElementById('modalMessage').focus(), 50);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('sendModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function sendGroupMessage() {
+            const groupId = document.getElementById('modalGroupId').value;
+            const message = document.getElementById('modalMessage').value.trim();
+
+            if (!message) {
+                showNotification('Pesan tidak boleh kosong', 'warning');
+                document.getElementById('modalMessage').focus();
+                return;
+            }
+
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i><span>Mengirim...</span>';
+
+            try {
+                const res = await fetch('/api/send-group-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groupId, message })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.details || data.error || 'Gagal mengirim pesan');
+
+                showNotification('Pesan berhasil dikirim ke grup!', 'success');
+                closeModal();
+            } catch (err) {
+                showNotification('Gagal: ' + err.message, 'error');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="ri-send-plane-fill group-hover:scale-110 transition-transform"></i><span>Kirim Pesan</span>';
+            }
+        }
+
+        document.getElementById('sendModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            renderTable(allGroups.filter(g =>
+                g.name.toLowerCase().includes(q) || g.id.toLowerCase().includes(q)
+            ));
+        });
+
+        document.addEventListener('DOMContentLoaded', loadGroups);
+    </script>
+</body>
+</html>
