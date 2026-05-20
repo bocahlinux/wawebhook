@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <%- include('partials/head', { title: 'Log Notifikasi' }) %>
+</head>
+<body class="bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div class="flex min-h-screen">
+        <%- include('partials/sidebar') %>
+        <div class="flex-1 flex flex-col lg:ml-64">
+            <%- include('partials/navbar', { title: 'Log Notifikasi' }) %>
+            <main class="flex-1 p-4 sm:p-6 lg:p-8">
+                <div class="max-w-7xl mx-auto">
+
+                    <!-- Header -->
+                    <div class="mb-8 fade-in">
+                        <a href="/notifications" class="inline-flex items-center space-x-1 text-sm text-gray-500 hover:text-gray-700 transition-colors mb-3">
+                            <i class="ri-arrow-left-line"></i>
+                            <span>Kembali ke Template</span>
+                        </a>
+                        <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Log Pengiriman</h1>
+                        <p class="text-lg text-gray-600">Riwayat pengiriman untuk template <span class="font-semibold text-gray-800"><%= template.name %></span></p>
+                    </div>
+
+                    <!-- Info Template -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-5 fade-in">
+                            <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Slug API</p>
+                            <code class="text-sm text-blue-600 font-mono">/api/notify/<%= template.slug %></code>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-5 fade-in">
+                            <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Group ID</p>
+                            <code class="text-sm text-gray-700 font-mono truncate block"><%= template.groupId %></code>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-5 fade-in">
+                            <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Total Log</p>
+                            <p class="text-2xl font-bold text-gray-800"><%= logs.length %></p>
+                        </div>
+                    </div>
+
+                    <!-- Log Table -->
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 fade-in">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-xl font-semibold text-gray-800">Riwayat Pengiriman</h3>
+                                <p class="text-sm text-gray-600 mt-1">Menampilkan 100 log terbaru</p>
+                            </div>
+                            <div class="w-14 h-14 bg-linear-to-br from-indigo-100 to-indigo-200 rounded-2xl flex items-center justify-center shadow-inner">
+                                <i class="ri-history-line text-indigo-600 text-2xl"></i>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-left border-b border-gray-100">
+                                        <th class="pb-4 px-4 font-semibold text-gray-800">Status</th>
+                                        <th class="pb-4 px-4 font-semibold text-gray-800">Waktu</th>
+                                        <th class="pb-4 px-4 font-semibold text-gray-800">Variabel</th>
+                                        <th class="pb-4 px-4 font-semibold text-gray-800">Pesan Terkirim</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50">
+                                    <% if (logs && logs.length > 0) { %>
+                                        <% logs.forEach(log => { %>
+                                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                                <td class="py-4 px-4">
+                                                    <% if (log.status === 'sent') { %>
+                                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                                                            <span class="w-2 h-2 rounded-full mr-1.5 bg-green-500"></span>TERKIRIM
+                                                        </span>
+                                                    <% } else { %>
+                                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                                                            <span class="w-2 h-2 rounded-full mr-1.5 bg-red-500"></span>GAGAL
+                                                        </span>
+                                                    <% } %>
+                                                </td>
+                                                <td class="py-4 px-4 text-sm text-gray-600 whitespace-nowrap">
+                                                    <%= new Date(log.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) %>
+                                                </td>
+                                                <td class="py-4 px-4">
+                                                    <div class="flex flex-wrap gap-1 max-w-xs">
+                                                        <% Object.entries(log.variables || {}).forEach(([k, v]) => { %>
+                                                            <span class="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono"><%= k %>: <%= v %></span>
+                                                        <% }); %>
+                                                    </div>
+                                                    <% if (log.status === 'failed' && log.error) { %>
+                                                        <p class="text-xs text-red-500 mt-1"><%= log.error %></p>
+                                                    <% } %>
+                                                </td>
+                                                <td class="py-4 px-4">
+                                                    <pre class="text-xs text-gray-600 bg-gray-50 p-2 rounded-lg max-w-sm whitespace-pre-wrap font-mono"><%= log.renderedMessage || '—' %></pre>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td colspan="4" class="py-12 text-center text-gray-500">
+                                                <div class="flex flex-col items-center space-y-3">
+                                                    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-2">
+                                                        <i class="ri-history-line text-4xl text-gray-300"></i>
+                                                    </div>
+                                                    <p class="text-lg font-medium text-gray-400">Belum ada log pengiriman</p>
+                                                    <p class="text-sm">Notifikasi belum pernah dikirim melalui template ini.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <%- include('partials/bottom-nav') %>
+    <%- include('partials/simple-scripts') %>
+</body>
+</html>

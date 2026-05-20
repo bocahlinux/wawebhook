@@ -37,6 +37,7 @@ import apiKeyRoutes from './src/routes/apiKeys.js';
 import settingsRoutes from './src/routes/settings.js';
 import userRoutes from './src/routes/users.js';
 import scheduledMessagesRoutes from './src/routes/scheduledMessages.js';
+import notificationRoutes from './src/routes/notifications.js';
 
 // Import utilities
 import { info, error as _error, warn } from './src/utils/logger.js';
@@ -216,6 +217,9 @@ class Application {
         
         // Scheduled messages routes
         this.app.use('/scheduled-messages', scheduledMessagesRoutes);
+
+        // Notification template routes
+        this.app.use('/', notificationRoutes);
 
         info('Routes configured');
     }

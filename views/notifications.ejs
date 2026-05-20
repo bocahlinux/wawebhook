@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <%- include('partials/head', { title: 'Template Notifikasi' }) %>
+</head>
+<body class="bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div class="flex min-h-screen">
+        <%- include('partials/sidebar') %>
+        <div class="flex-1 flex flex-col lg:ml-64">
+            <%- include('partials/navbar', { title: 'Template Notifikasi' }) %>
+            <main class="flex-1 p-4 sm:p-6 lg:p-8">
+                <div class="max-w-7xl mx-auto">
+
+                    <!-- Welcome Section -->
+                    <div class="mb-8 fade-in">
+                        <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Template Notifikasi</h1>
+                        <p class="text-lg text-gray-600">Buat template pesan dinamis untuk dikirim via API ke grup WhatsApp</p>
+                    </div>
+
+                    <!-- Alerts -->
+                    <% if (locals.error) { %>
+                        <div class="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center space-x-2 fade-in">
+                            <i class="ri-error-warning-line shrink-0"></i>
+                            <span><%= error %></span>
+                        </div>
+                    <% } %>
+                    <% if (locals.success) { %>
+                        <div class="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-center space-x-2 fade-in">
+                            <i class="ri-checkbox-circle-line shrink-0"></i>
+                            <span><%= success %></span>
+                        </div>
+                    <% } %>
+
+                    <!-- Form Tambah Template + Info API -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+                        <!-- Form Tambah -->
+                        <div class="lg:col-span-2 bg-white rounded-2xl shadow-lg border border-gray-100 p-6 card-hover transition-all duration-300 fade-in">
+                            <div class="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-800">Tambah Template Baru</h3>
+                                    <p class="text-sm text-gray-600 mt-1">Gunakan <code class="bg-gray-100 px-1 rounded text-xs font-mono">&#123;&#123;variabel&#125;&#125;</code> untuk bagian yang dinamis</p>
+                                </div>
+                                <div class="w-14 h-14 bg-linear-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center shadow-inner">
+                                    <i class="ri-notification-3-line text-yellow-600 text-2xl"></i>
+                                </div>
+                            </div>
+                            <form action="/notifications/add" method="POST" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-gray-700">Nama Template</label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="ri-file-text-line"></i></span>
+                                            <input type="text" name="name" required placeholder="Notifikasi Jaringan Putus"
+                                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all outline-none text-sm">
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-gray-700">Slug <span class="text-gray-400 font-normal">(untuk URL API)</span></label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="ri-link-m"></i></span>
+                                            <input type="text" name="slug" required placeholder="jaringan-putus"
+                                                pattern="[a-z0-9\-]+" title="Hanya huruf kecil, angka, dan tanda strip"
+                                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all outline-none text-sm font-mono">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-gray-700">Group ID Tujuan</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="ri-group-line"></i></span>
+                                        <input type="text" name="groupId" required placeholder="120363XXXXXXXXXX@g.us"
+                                            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all outline-none text-sm font-mono">
+                                    </div>
+                                    <p class="text-xs text-gray-400">Lihat Group ID di menu <a href="/groups" class="text-blue-500 hover:underline">Grup WhatsApp</a></p>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-gray-700">Template Pesan</label>
+                                    <textarea name="template" required rows="5" placeholder="*&#123;&#123;judul&#125;&#125;*&#10;&#10;Lokasi: &#123;&#123;lokasi&#125;&#125;&#10;Status: &#123;&#123;status&#125;&#125;&#10;&#10;&#123;&#123;pesan&#125;&#125;"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all outline-none text-sm font-mono resize-none"></textarea>
+                                    <p class="text-xs text-gray-400">Format WhatsApp: <code class="bg-gray-100 px-1 rounded">*bold*</code> <code class="bg-gray-100 px-1 rounded">_italic_</code> <code class="bg-gray-100 px-1 rounded">```monospace```</code></p>
+                                </div>
+                                <div class="flex justify-end">
+                                    <button type="submit" class="group flex items-center space-x-2 px-6 py-3 bg-linear-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-1">
+                                        <i class="ri-save-line group-hover:scale-110 transition-transform"></i>
+                                        <span>Simpan Template</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Info API -->
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 fade-in">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-800">Cara Pakai API</h3>
+                                    <p class="text-sm text-gray-600 mt-1">Panggil dari MikroTik / sistem lain</p>
+                                </div>
+                                <div class="w-14 h-14 bg-linear-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center shadow-inner">
+                                    <i class="ri-code-s-slash-line text-blue-600 text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="p-3 bg-gray-900 rounded-xl">
+                                    <p class="text-[10px] text-gray-400 uppercase font-semibold mb-1">Endpoint</p>
+                                    <code class="text-xs text-green-400 font-mono break-all">POST /api/notify/:slug</code>
+                                </div>
+                                <div class="p-3 bg-gray-900 rounded-xl">
+                                    <p class="text-[10px] text-gray-400 uppercase font-semibold mb-1">Body (JSON)</p>
+                                    <pre class="text-xs text-yellow-300 font-mono whitespace-pre-wrap">{
+  "lokasi": "ERI BPKB",
+  "status": "DOWN",
+  "pesan": "Server putus"
+}</pre>
+                                </div>
+                                <div class="p-3 bg-gray-900 rounded-xl">
+                                    <p class="text-[10px] text-gray-400 uppercase font-semibold mb-1">MikroTik</p>
+                                    <pre class="text-[10px] text-blue-300 font-mono whitespace-pre-wrap">/tool fetch \
+  url="http://IP:PORT/api/notify/slug" \
+  http-method=post \
+  http-header-field="Content-Type: application/json,X-API-KEY: KEY" \
+  http-data=("{\"lokasi\":\"ERI\"}") \
+  output=user</pre>
+                                </div>
+                                <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                                    <div class="flex items-start space-x-2">
+                                        <i class="ri-lightbulb-line text-yellow-600 mt-0.5 shrink-0 text-sm"></i>
+                                        <p class="text-xs text-yellow-700">Variabel di body otomatis menggantikan <code class="bg-yellow-100 px-1 rounded font-mono">&#123;&#123;variabel&#125;&#125;</code> di template</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Daftar Template -->
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 fade-in">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-xl font-semibold text-gray-800">Daftar Template</h3>
+                                <p class="text-sm text-gray-600 mt-1">Kelola semua template notifikasi</p>
+                            </div>
+                            <div class="w-14 h-14 bg-linear-to-br from-indigo-100 to-indigo-200 rounded-2xl flex items-center justify-center shadow-inner">
+                                <i class="ri-list-settings-line text-indigo-600 text-2xl"></i>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-left border-b border-gray-100">
+                                        <th class="pb-4 px-4 font-semibold text-gray-800">Status</th>
+                                        <th class="pb-4 px-4 font-semibold text-gray-800">Nama & Slug</th>
+                                        <th class="pb-4 px-4 font-semibold text-gray-800">Group ID</th>
+                                        <th class="pb-4 px-4 font-semibold text-gray-800">Variabel</th>
+                                        <th class="pb-4 px-4 font-semibold text-gray-800 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50">
+                                    <% if (templates && templates.length > 0) { %>
+                                        <% templates.forEach(tpl => { %>
+                                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                                <td class="py-4 px-4">
+                                                    <a href="/notifications/toggle/<%= tpl._id %>"
+                                                        class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold transition-all
+                                                        <%= tpl.enabled ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200' %>">
+                                                        <span class="w-2 h-2 rounded-full mr-1.5 <%= tpl.enabled ? 'bg-green-500' : 'bg-gray-400' %>"></span>
+                                                        <%= tpl.enabled ? 'AKTIF' : 'NONAKTIF' %>
+                                                    </a>
+                                                </td>
+                                                <td class="py-4 px-4">
+                                                    <p class="font-medium text-gray-800 text-sm"><%= tpl.name %></p>
+                                                    <code class="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-mono mt-0.5 inline-block">/api/notify/<%= tpl.slug %></code>
+                                                </td>
+                                                <td class="py-4 px-4">
+                                                    <code class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-mono"><%= tpl.groupId %></code>
+                                                </td>
+                                                <td class="py-4 px-4">
+                                                    <div class="flex flex-wrap gap-1">
+                                                        <% if (tpl.variables && tpl.variables.length > 0) { %>
+                                                            <% tpl.variables.forEach(v => { %>
+                                                                <span class="inline-block px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-mono">{{<%= v %>}}</span>
+                                                            <% }); %>
+                                                        <% } else { %>
+                                                            <span class="text-xs text-gray-400">—</span>
+                                                        <% } %>
+                                                    </div>
+                                                </td>
+                                                <td class="py-4 px-4">
+                                                    <div class="flex items-center justify-center space-x-1">
+                                                        <!-- Log -->
+                                                        <a href="/notifications/<%= tpl._id %>/logs"
+                                                            class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all duration-200" title="Lihat Log">
+                                                            <i class="ri-history-line text-lg"></i>
+                                                        </a>
+                                                        <!-- Edit -->
+                                                        <button
+                                                            data-id="<%= tpl._id %>"
+                                                            data-name="<%= encodeURIComponent(tpl.name) %>"
+                                                            data-slug="<%= tpl.slug %>"
+                                                            data-groupid="<%= tpl.groupId %>"
+                                                            data-template="<%= encodeURIComponent(tpl.template) %>"
+                                                            onclick="openEditModal(this)"
+                                                            class="p-2 text-yellow-500 hover:bg-yellow-50 rounded-xl transition-all duration-200" title="Edit">
+                                                            <i class="ri-edit-line text-lg"></i>
+                                                        </button>
+                                                        <!-- Hapus -->
+                                                        <form action="/notifications/delete/<%= tpl._id %>" method="POST"
+                                                            data-confirm="Hapus template '<%= tpl.name %>'? Log pengiriman tidak ikut terhapus." class="inline">
+                                                            <button type="submit" class="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200" title="Hapus">
+                                                                <i class="ri-delete-bin-line text-lg"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td colspan="5" class="py-12 text-center text-gray-500">
+                                                <div class="flex flex-col items-center space-y-3">
+                                                    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-2">
+                                                        <i class="ri-notification-off-line text-4xl text-gray-300"></i>
+                                                    </div>
+                                                    <p class="text-lg font-medium text-gray-400">Belum ada template notifikasi</p>
+                                                    <p class="text-sm">Tambahkan template baru di atas untuk mulai mengirim notifikasi via API.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <%- include('partials/bottom-nav') %>
+
+    <!-- Modal Edit Template -->
+    <div id="editModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-40 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeEditModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="ri-close-line text-2xl"></i>
+            </button>
+            <div class="flex items-center space-x-3 mb-6">
+                <div class="w-14 h-14 bg-linear-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center shadow-inner">
+                    <i class="ri-edit-line text-yellow-600 text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">Edit Template</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Perbarui konfigurasi template notifikasi</p>
+                </div>
+            </div>
+            <form id="editForm" method="POST" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">Nama Template</label>
+                        <input type="text" name="name" id="editName" required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all outline-none text-sm">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">Slug</label>
+                        <input type="text" name="slug" id="editSlug" required pattern="[a-z0-9\-]+"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all outline-none text-sm font-mono">
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">Group ID</label>
+                    <input type="text" name="groupId" id="editGroupId" required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all outline-none text-sm font-mono">
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">Template Pesan</label>
+                    <textarea name="template" id="editTemplate" required rows="6"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all outline-none text-sm font-mono resize-none"></textarea>
+                </div>
+                <div class="flex items-center space-x-3 pt-2">
+                    <button type="button" onclick="closeEditModal()"
+                        class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm">
+                        Batal
+                    </button>
+                    <button type="submit"
+                        class="flex-1 group flex items-center justify-center space-x-2 py-3 bg-linear-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg text-sm">
+                        <i class="ri-save-line group-hover:scale-110 transition-transform"></i>
+                        <span>Simpan Perubahan</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <%- include('partials/simple-scripts') %>
+
+    <script>
+        function openEditModal(btn) {
+            document.getElementById('editForm').action = `/notifications/edit/${btn.dataset.id}`;
+            document.getElementById('editName').value = decodeURIComponent(btn.dataset.name);
+            document.getElementById('editSlug').value = btn.dataset.slug;
+            document.getElementById('editGroupId').value = btn.dataset.groupid;
+            document.getElementById('editTemplate').value = decodeURIComponent(btn.dataset.template);
+            const modal = document.getElementById('editModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('editModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) closeEditModal();
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeEditModal();
+        });
+    </script>
+</body>
+</html>
