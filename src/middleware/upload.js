@@ -20,4 +20,18 @@ const upload = multer({
     }
 });
 
-export { upload };
+// Multer khusus untuk upload PDF (opsional, maks 20MB)
+const uploadPdf = multer({
+    storage: memoryStorage(),
+    limits: { fileSize: 20 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const fileExt = extname(file.originalname).toLowerCase();
+        if (fileExt === '.pdf' || file.mimetype === 'application/pdf') {
+            cb(null, true);
+        } else {
+            cb(new Error('Only PDF files are allowed!'), false);
+        }
+    }
+});
+
+export { upload, uploadPdf };

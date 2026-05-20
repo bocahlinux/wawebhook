@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { isAuthenticatedOrApiKey, getEffectiveUserId, isAuthenticated } from '../middleware/auth.js';
+import { uploadPdf } from '../middleware/upload.js';
 import ContactService from '../services/ContactService.js';
 import MessageService from '../services/MessageService.js';
 
@@ -139,6 +140,52 @@ router.post('/api/send-group-message', isAuthenticatedOrApiKey, async (req, res)
         console.error('Error sending group message:', error);
         res.status(500).json({
             error: 'Failed to send group message',
+            details: error.message
+        });
+    }
+});
+
+// Send a PDF file (opsional caption)
+router.post('/send-file', isAuthenticatedOrApiKey, uploadPdf.single('file'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({
+            error: 'Missing file',
+            message: 'Field "file" (PDF) wajib diisi'
+        });
+    }
+
+    const { to, caption } = req.body;
+
+    if (!to) {
+        return res.status(400).json({
+            error: 'Missing required fields',
+            message: 'Field "to" wajib diisi'
+        });
+    }
+
+    try {
+        const userId = getEffectiveUserId(req);
+        const whatsappService = req.app.get('whatsappService');
+
+        const result = await whatsappService.sendFile(
+            userId,
+            to,
+            req.file.buffer,
+            req.file.originalname,
+            caption || ''
+        );
+
+        res.json({
+            success: true,
+            messageId: result.key.id,
+            to,
+            fileName: req.file.originalname,
+            caption: caption || ''
+        });
+    } catch (error) {
+        console.error('Error sending file:', error);
+        res.status(500).json({
+            error: 'Failed to send file',
             details: error.message
         });
     }

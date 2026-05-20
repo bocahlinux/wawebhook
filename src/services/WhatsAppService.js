@@ -456,6 +456,39 @@ class WhatsAppService {
     }
 
     /**
+     * Send a PDF document via WhatsApp
+     */
+    async sendFile(userId, to, fileBuffer, fileName, caption = '') {
+        const session = await this.ensureSession(userId);
+
+        if (!session.isConnected) {
+            throw new Error('WhatsApp not connected');
+        }
+
+        const phone = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+
+        const result = await session.sock.sendMessage(phone, {
+            document: fileBuffer,
+            mimetype: 'application/pdf',
+            fileName: fileName,
+            caption: caption
+        });
+
+        if (this.webhookService && this.appSettings.webhook_toggle_message_out !== 'false') {
+            this.webhookService.send('message.out', {
+                userId,
+                id: result.key.id,
+                chatJid: phone,
+                sender: 'me',
+                text: caption,
+                timestamp: Date.now()
+            });
+        }
+
+        return result;
+    }
+
+    /**
      * Logout user from WhatsApp
      */
     async logout(userId) {
