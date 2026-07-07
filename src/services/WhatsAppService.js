@@ -456,6 +456,34 @@ class WhatsAppService {
     }
 
     /**
+     * Wait until a `messages.update` ack arrives for the given message id,
+     * or until timeoutMs elapses - whichever comes first. Used to give
+     * WhatsApp's server time to process a warm-up message (and establish the
+     * tctoken for new contacts) before sending a follow-up document.
+     */
+    waitForMessageAck(sock, messageId, timeoutMs = 4000) {
+        return new Promise((resolve) => {
+            let done = false;
+            const finish = () => {
+                if (done) return;
+                done = true;
+                sock.ev.off('messages.update', handler);
+                clearTimeout(timer);
+                resolve();
+            };
+
+            const handler = (updates) => {
+                if (updates.some((u) => u.key?.id === messageId)) {
+                    finish();
+                }
+            };
+
+            sock.ev.on('messages.update', handler);
+            const timer = setTimeout(finish, timeoutMs);
+        });
+    }
+
+    /**
      * Send a PDF document via WhatsApp
      */
     async sendFile(userId, to, fileBuffer, fileName, caption = '') {
@@ -469,10 +497,12 @@ class WhatsAppService {
 
         // WhatsApp may reject document sends to contacts with no prior chat
         // history (error 463 / missing tctoken). Warm up new contacts with a
-        // plain text message first so the chat gets established.
+        // plain text message first and wait for its ack before sending the
+        // file, so the chat has a better chance of being established.
         const hasHistory = await MessageService.hasChatHistory(userId, phone);
         if (!hasHistory) {
-            await this.sendMessage(userId, phone, `Mengirim file: ${fileName}`);
+            const warmup = await this.sendMessage(userId, phone, `Mengirim file: ${fileName}`);
+            await this.waitForMessageAck(session.sock, warmup.key.id);
         }
 
         const result = await session.sock.sendMessage(phone, {
