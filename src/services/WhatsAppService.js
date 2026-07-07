@@ -1,4 +1,4 @@
-import { default as makeWASocket, DisconnectReason, useMultiFileAuthState, Browsers, fetchLatestBaileysVersion, generateWAMessageFromContent, proto } from 'baileys';
+import { default as makeWASocket, DisconnectReason, useMultiFileAuthState, Browsers, fetchLatestBaileysVersion, generateWAMessageFromContent, proto } from '@whiskeysockets/baileys';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const buttonsWarpper = require('buttons-warpper');
