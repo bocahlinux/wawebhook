@@ -30,7 +30,7 @@
   "description": "",
   "dependencies": {
     "@hapi/boom": "^10.0.1",
-    "@whiskeysockets/baileys": "6.7.19",
+    "@whiskeysockets/baileys": "6.7.23",
     "baileys-shard": "^0.0.7",
     "bcryptjs": "^3.0.3",
     "body-parser": "^1.20.3",

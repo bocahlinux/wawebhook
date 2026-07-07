@@ -1,4 +1,4 @@
-import { default as makeWASocket, DisconnectReason, useMultiFileAuthState, Browsers, fetchLatestBaileysVersion, generateWAMessageFromContent, proto } from '@whiskeysockets/baileys';
+import { default as makeWASocket, DisconnectReason, useMultiFileAuthState, Browsers, fetchLatestBaileysVersion, generateWAMessageFromContent, proto } from 'baileys';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const buttonsWarpper = require('buttons-warpper');
@@ -466,6 +466,14 @@ class WhatsAppService {
         }
 
         const phone = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+
+        // WhatsApp may reject document sends to contacts with no prior chat
+        // history (error 463 / missing tctoken). Warm up new contacts with a
+        // plain text message first so the chat gets established.
+        const hasHistory = await MessageService.hasChatHistory(userId, phone);
+        if (!hasHistory) {
+            await this.sendMessage(userId, phone, `Mengirim file: ${fileName}`);
+        }
 
         const result = await session.sock.sendMessage(phone, {
             document: fileBuffer,

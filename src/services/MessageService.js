@@ -71,6 +71,21 @@ class MessageService {
     }
 
     /**
+     * Check whether any message (in or out) already exists for this chat.
+     * Used to detect "cold" contacts that WhatsApp may reject media/document
+     * sends to (error 463) until a first text message establishes the chat.
+     */
+    static async hasChatHistory(userId, chatJid) {
+        try {
+            const exists = await Message.exists({ userId, chatJid });
+            return !!exists;
+        } catch (error) {
+            console.error('Check chat history error:', error);
+            return false;
+        }
+    }
+
+    /**
      * Get messages for a specific chat
      */
     static async getChatMessages(userId, chatJid) {
@@ -92,3 +107,4 @@ export default MessageService;
 export const recordMessage = MessageService.recordMessage;
 export const getChats = MessageService.getChats;
 export const getChatMessages = MessageService.getChatMessages;
+export const hasChatHistory = MessageService.hasChatHistory;
